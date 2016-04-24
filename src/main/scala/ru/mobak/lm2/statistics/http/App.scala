@@ -5,11 +5,17 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
+import org.joda.time.{LocalDate, LocalDateTime}
+import ru.mobak.lm2.statistics.http.net.HttpAssembly
+import ru.mobak.lm2.statistics.http.rating.Rating
+import scalikejdbc.config._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.Failure
+
 
 class HelloActor extends Actor {
   def receive = {
@@ -19,13 +25,17 @@ class HelloActor extends Actor {
 }
 
 object App extends App with LazyLogging {
-  implicit val system = ActorSystem("lm2-statistics-http")
+  val config = ConfigFactory.load()
+
+  implicit val system = ActorSystem(config.getString("app.name"))
   implicit val materializer = ActorMaterializer()
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
 
+  DBsWithEnv("app").setupAll()
+
   val host = "localhost"
-  val port = 8080
+  val port = 8089
 
   val route =
     path("hello") {
@@ -35,13 +45,25 @@ object App extends App with LazyLogging {
       }
     }
 
-  val bindingFuture = Http().bindAndHandle(route, host, port)
+  val bindingFuture = Http().bindAndHandle(HttpAssembly.route, host, port)
   bindingFuture.onComplete {
     case Failure(ex) =>
       logger.error(s"Failed to bind to $host:$port!", ex)
     case _ =>
       logger.info(s"Server online at http://$host:$port/")
   }
+
+  val dateTime = LocalDate.now()
+  val startOfWeek = dateTime.weekOfWeekyear().roundFloorCopy()
+  val endOfWeek = dateTime.weekOfWeekyear().roundCeilingCopy()
+
+  logger.info(s"DateTime: $dateTime")
+  logger.info(s"StartOfWeek: $startOfWeek")
+  logger.info(s"EndOfWeek: $endOfWeek")
+
+//  Rating.membersByLevel(20) foreach { m =>
+//    logger.info(s"${m.name}")
+//  }
 
   Await.result(system.whenTerminated, Duration.Inf)
 }
