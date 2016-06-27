@@ -7,15 +7,13 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
-import org.joda.time.{LocalDate, LocalDateTime}
+import org.joda.time.{DateTimeConstants, LocalDate}
 import ru.mobak.lm2.statistics.http.net.HttpAssembly
-import ru.mobak.lm2.statistics.http.rating.Rating
 import scalikejdbc.config._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.Failure
-
 
 class HelloActor extends Actor {
   def receive = {
@@ -40,7 +38,7 @@ object App extends App with LazyLogging {
   val route =
     path("hello") {
       get {
-        //        complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+//        complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
         complete(StatusCodes.OK, "<h1>Say hello to akka-http</h1>")
       }
     }
@@ -53,9 +51,9 @@ object App extends App with LazyLogging {
       logger.info(s"Server online at http://$host:$port/")
   }
 
-  val dateTime = LocalDate.now()
-  val startOfWeek = dateTime.weekOfWeekyear().roundFloorCopy()
-  val endOfWeek = dateTime.weekOfWeekyear().roundCeilingCopy()
+  val dateTime = LocalDate.now().minusWeeks(1)
+  val startOfWeek = dateTime.withDayOfWeek(DateTimeConstants.MONDAY)
+  val endOfWeek = dateTime.plusWeeks(1).withDayOfWeek(DateTimeConstants.MONDAY)
 
   logger.info(s"DateTime: $dateTime")
   logger.info(s"StartOfWeek: $startOfWeek")
